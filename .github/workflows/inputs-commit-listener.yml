@@ -50,7 +50,7 @@ jobs:
               return subprocess.run(["git", *args], input=input, check=True,
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
 
-          def commit_if_changed():
+          def commit_if_changed(message="Reset invalid Inputs surface"):
               staged = subprocess.run(["git", "diff", "--cached", "--quiet"])
               if staged.returncode == 0:
                   return
@@ -59,7 +59,7 @@ jobs:
               subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
               subprocess.run(["git", "config", "user.email",
                               "41898282+github-actions[bot]@users.noreply.github.com"], check=True)
-              subprocess.run(["git", "commit", "-m", "Log first Inputs processing error"], check=True)
+              subprocess.run(["git", "commit", "-m", message], check=True)
               subprocess.run(["git", "push", "origin",
                               "HEAD:refs/heads/" + os.environ["BRANCH_NAME"]], check=True)
 
@@ -172,7 +172,7 @@ jobs:
               # and potential error logging, while clearing the repository surface.
               path.write_text("{}\n", encoding="utf-8")
               subprocess.run(["git", "add", "--", str(path)], check=True)
-              commit_if_changed()
+              commit_if_changed("Consume validated Inputs surface")
               print(f"INPUT CLEARED AND COMMITTED: {path}", flush=True)
 
               try:
