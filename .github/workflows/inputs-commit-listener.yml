@@ -6,19 +6,74 @@ on:
       - 'Inputs/**'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   inputs-commit-listener:
     runs-on: ubuntu-latest
     steps:
-      - name: Report triggering commit
+      - name: Check out triggering branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Step 1 - Validate changed Inputs as JSON
+        shell: bash
         env:
-          COMMIT_SHA: ${{ github.sha }}
-          REF_NAME: ${{ github.ref_name }}
-          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
         run: |
-          echo "Inputs change detected."
-          echo "Event: $EVENT_NAME"
-          echo "Ref: $REF_NAME"
-          echo "Commit: $COMMIT_SHA"
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+
+          before = os.environ["BEFORE_SHA"]
+          after = os.environ["AFTER_SHA"]
+          if before == "0" * 40:
+              before = subprocess.check_output(
+                  ["git", "hash-object", "-t", "tree", "--stdin"],
+                  input=b"",
+              ).decode().strip()
+
+          paths = subprocess.check_output([
+              "git", "diff", "--name-only", "-z",
+              "--diff-filter=ACMR", before, after, "--", "Inputs/"
+          ]).split(b"\0")
+
+          valid = invalid = 0
+          for raw in paths:
+              if not raw:
+                  continue
+              path = Path(os.fsdecode(raw))
+              if not path.is_file() or path.is_symlink():
+                  continue
+              try:
+                  with path.open("r", encoding="utf-8") as stream:
+                      json.load(stream)
+              except (ValueError, UnicodeError):
+                  path.write_text("{}\n", encoding="utf-8")
+                  subprocess.run(["git", "add", "--", str(path)], check=True)
+                  print(f"INVALID JSON - reset to {{}}: {path}")
+                  invalid += 1
+              else:
+                  print(f"VALID JSON - preserved: {path}")
+                  valid += 1
+
+          print(f"JSON validation completed: {valid} valid, {invalid} reset")
+          PY
+
+      - name: Commit corrected files if required
+        shell: bash
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --cached --quiet; then
+            echo "No invalid JSON files required correction."
+          else
+            git commit -m "Reset invalid Inputs JSON to empty objects"
+            git push origin "HEAD:refs/heads/$BRANCH_NAME"
+          fi
