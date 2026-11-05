@@ -3,9 +3,17 @@ name: Append log entry
 on:
   workflow_dispatch:
     inputs:
-      entry:
-        description: 'JSON object with Source, Time, Input, Error'
+      operation:
+        description: 'append or initialize'
         required: true
+        default: append
+        type: choice
+        options:
+          - append
+          - initialize
+      entry:
+        description: 'JSON object with Source, Time, Input, Error (required for append)'
+        required: false
         type: string
 
 permissions:
@@ -25,9 +33,10 @@ jobs:
           ref: main
           persist-credentials: true
 
-      - name: Validate entry and append to log.json
+      - name: Perform validated log operation
         shell: bash
         env:
+          OPERATION: ${{ inputs.operation }}
           ENTRY_JSON: ${{ inputs.entry }}
         run: |
           python3 - <<'PY'
@@ -35,24 +44,38 @@ jobs:
           import os
           from pathlib import Path
 
-          entry = json.loads(os.environ["ENTRY_JSON"])
-          required = {"Source", "Time", "Input", "Error"}
-          if not isinstance(entry, dict) or set(entry) != required:
-              raise ValueError("Log entry must contain exactly Source, Time, Input, Error")
-          if (not isinstance(entry["Source"], str)
-                  or not isinstance(entry["Time"], int)
-                  or isinstance(entry["Time"], bool)
-                  or not isinstance(entry["Input"], str)
-                  or not isinstance(entry["Error"], str)):
-              raise ValueError("Invalid log entry types")
+          operation = os.environ["OPERATION"]
           path = Path("log.json")
-          entries = json.loads(path.read_text(encoding="utf-8"))
-          if not isinstance(entries, list):
-              raise ValueError("log.json must be an array")
-          entries.append(entry)
-          path.write_text(json.dumps(entries, ensure_ascii=False, indent=2) + "\n",
-                          encoding="utf-8")
-          print(f"Appending error entry for source {entry['Source']}")
+          if operation == "initialize":
+              if path.exists():
+                  entries = json.loads(path.read_text(encoding="utf-8"))
+                  if not isinstance(entries, list):
+                      raise ValueError("Existing log.json must be a JSON array")
+                  print("log.json already exists; preserving contents.")
+              else:
+                  path.write_text("[]\n", encoding="utf-8")
+                  print("Initialized log.json as an empty array.")
+          elif operation == "append":
+              entry = json.loads(os.environ["ENTRY_JSON"])
+              required = {"Source", "Time", "Input", "Error"}
+              if not isinstance(entry, dict) or set(entry) != required:
+                  raise ValueError("Log entry must contain exactly Source, Time, Input, Error")
+              if (not isinstance(entry["Source"], str)
+                      or not isinstance(entry["Time"], int)
+                      or isinstance(entry["Time"], bool)
+                      or not isinstance(entry["Input"], str)
+                      or not isinstance(entry["Error"], str)):
+                  raise ValueError("Invalid log entry types")
+              entries = json.loads(path.read_text(encoding="utf-8"))
+              if not isinstance(entries, list):
+                  raise ValueError("log.json must be an array")
+              entries.append(entry)
+              path.write_text(json.dumps(entries, ensure_ascii=False, indent=2) + "\n",
+                              encoding="utf-8")
+              print(f"Appending error entry for source {entry['Source']}")
+          else:
+              raise ValueError(f"Unsupported log operation: {operation}")
+
           PY
 
       - name: Commit log.json
@@ -61,7 +84,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- log.json
-          git commit -m "Append dispatched log entry"
+          if git diff --cached --quiet; then
+            echo "No changes to log.json."
+            exit 0
+          fi
+          git commit -m "Apply dispatched log operation"
           for attempt in 1 2 3 4 5; do
             git fetch origin main
             git rebase origin/main
