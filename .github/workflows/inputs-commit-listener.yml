@@ -28,12 +28,14 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
           AFTER_SHA: ${{ github.sha }}
           BRANCH_NAME: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           python3 - <<'PY'
           import json
           import os
           from pathlib import Path
           import re
+          import shlex
           import subprocess
           import sys
           import time
@@ -127,27 +129,54 @@ jobs:
                       '"command": string, "arguments": object, "flags": object. '
                       f"Expected shape: {SHAPE}", True)
 
-              # No CL-specific argument/flag mapping is defined in this repository.
-              # Pass the objects to the shell in environment variables without guessing CLI syntax.
+              # Dispatch strictly by the validated CL selector.
+              # Argument and flag objects remain environment-provided until a
+              # CLI mapping contract is specified.
               env = os.environ.copy()
               env["CL"] = symbol
               env["CL_ARGUMENTS_JSON"] = json.dumps(spec["arguments"])
               env["CL_FLAGS_JSON"] = json.dumps(spec["flags"])
+
+              if symbol == "@":
+                  error_and_halt(path, source, original,
+                      "Applications runner is not implemented (CL=@); no command executed.",
+                      False)
+
               if not spec["command"].strip():
                   error_and_halt(path, source, original,
-                      "CL shell execution error: command is empty.", False)
+                      f"CL={symbol} execution error: command is empty.", False)
+
+              if symbol == "$":
+                  argv = ["bash", "-lc", spec["command"]]
+                  engine = "Bash"
+              elif symbol == "&":
+                  try:
+                      tokens = shlex.split(spec["command"])
+                  except ValueError as exc:
+                      error_and_halt(path, source, original,
+                          f"GitHub CLI command parsing error: {exc}", False)
+                  if tokens and tokens[0] == "gh":
+                      tokens = tokens[1:]
+                  if not tokens:
+                      error_and_halt(path, source, original,
+                          "GitHub CLI command is empty after removing optional gh prefix.",
+                          False)
+                  argv = ["gh", *tokens]
+                  engine = "GitHub CLI"
+              else:
+                  raise AssertionError("Unexpected validated CL value")
+
               try:
-                  result = subprocess.run(["bash", "-lc", spec["command"]],
-                                          env=env, capture_output=True, text=True)
+                  result = subprocess.run(argv, env=env, capture_output=True, text=True)
               except OSError as exc:
                   error_and_halt(path, source, original,
-                      f"CL shell execution error: {exc}", False)
+                      f"{engine} execution error: {exc}", False)
               if result.returncode != 0:
                   message = (result.stderr or result.stdout or
                              f"Command exited with status {result.returncode}").strip()
                   error_and_halt(path, source, original,
-                      f"CL shell execution error (exit {result.returncode}): {message}", False)
-              print(f"VALID AND EXECUTED: {path} (CL={symbol})")
+                      f"{engine} execution error (exit {result.returncode}): {message}", False)
+              print(f"VALID AND EXECUTED: {path} (CL={symbol}, engine={engine})")
 
           print("All changed agent input files processed without errors.")
           PY
