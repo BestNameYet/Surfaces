@@ -62,4 +62,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- log.json
           git commit -m "Append dispatched log entry"
-          git push origin HEAD:main
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git rebase origin/main
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Concurrent repository update; retrying ($attempt/5)."
+            sleep "$attempt"
+          done
+          echo "Failed to publish log after five attempts." >&2
+          exit 1
