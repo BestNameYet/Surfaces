@@ -1,0 +1,36 @@
+name: Create root log JSON
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  create-log:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Create log.json with an empty array
+        shell: bash
+        run: |
+          if [ ! -e log.json ]; then
+            printf '[]\n' > log.json
+          else
+            echo "log.json already exists; preserving existing contents."
+          fi
+
+      - name: Commit log.json if newly created
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add log.json
+          if git diff --cached --quiet; then
+            echo "No new log.json to commit."
+          else
+            git commit -m "Initialize root log.json"
+            git push
+          fi
