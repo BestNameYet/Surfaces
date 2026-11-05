@@ -72,7 +72,8 @@ jobs:
               subprocess.run([
                   "gh", "workflow", "run", "append-log.yml",
                   "--repo", os.environ["GH_REPO"],
-                  "--ref", "main", "--raw-field", "entry=" + payload
+                  "--ref", "main", "--raw-field", "operation=append",
+                  "--raw-field", "entry=" + payload
               ], check=True)
               print("Dispatched log append; completion is asynchronous.", flush=True)
               if reset:
