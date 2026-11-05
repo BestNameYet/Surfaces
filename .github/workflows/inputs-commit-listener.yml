@@ -167,6 +167,14 @@ jobs:
               else:
                   raise AssertionError("Unexpected validated CL value")
 
+              # A validated, executable input is consumed before the CL runs.
+              # Preserve the parsed command and original input in memory for execution
+              # and potential error logging, while clearing the repository surface.
+              path.write_text("{}\n", encoding="utf-8")
+              subprocess.run(["git", "add", "--", str(path)], check=True)
+              commit_if_changed()
+              print(f"INPUT CLEARED AND COMMITTED: {path}", flush=True)
+
               try:
                   result = subprocess.run(argv, env=env, capture_output=True, text=True)
               except OSError as exc:
