@@ -74,41 +74,41 @@ jobs:
             git reset --hard origin/main
 
           python3 - <<'PY'
-        import json
-        import os
-        from pathlib import Path
-
-        operation = os.environ["OPERATION"]
-        path = Path("log.json")
-        if path.exists():
-            entries = json.loads(path.read_text(encoding="utf-8"))
-            if not isinstance(entries, list):
-                raise ValueError("log.json must contain a JSON array")
-        else:
-            if operation != "initialize":
-                raise FileNotFoundError("log.json is absent; initialize it first")
-            entries = []
-
-        if operation == "initialize":
-            if path.exists():
-                print("log.json exists; initialization is a no-op.")
-            else:
-                path.write_text("[]\n", encoding="utf-8")
-                print("Initialized log.json as an empty array.")
-        else:
-            entry = json.loads(os.environ["ENTRY_JSON"])
-            key = (entry["Time"], entry["Source"])
-            if any(isinstance(item, dict)
-                   and item.get("Time") == key[0]
-                   and item.get("Source") == key[1]
-                   for item in entries):
-                print(f"DUPLICATE: Source={key[1]} Time={key[0]}; skipping append.")
-            else:
-                entries.append(entry)
-                path.write_text(json.dumps(entries, ensure_ascii=False, indent=2) + "\n",
-                                encoding="utf-8")
-                print(f"APPENDED: Source={key[1]} Time={key[0]}")
-        PY
+          import json
+          import os
+          from pathlib import Path
+  
+          operation = os.environ["OPERATION"]
+          path = Path("log.json")
+          if path.exists():
+              entries = json.loads(path.read_text(encoding="utf-8"))
+              if not isinstance(entries, list):
+                  raise ValueError("log.json must contain a JSON array")
+          else:
+              if operation != "initialize":
+                  raise FileNotFoundError("log.json is absent; initialize it first")
+              entries = []
+  
+          if operation == "initialize":
+              if path.exists():
+                  print("log.json exists; initialization is a no-op.")
+              else:
+                  path.write_text("[]\n", encoding="utf-8")
+                  print("Initialized log.json as an empty array.")
+          else:
+              entry = json.loads(os.environ["ENTRY_JSON"])
+              key = (entry["Time"], entry["Source"])
+              if any(isinstance(item, dict)
+                     and item.get("Time") == key[0]
+                     and item.get("Source") == key[1]
+                     for item in entries):
+                  print(f"DUPLICATE: Source={key[1]} Time={key[0]}; skipping append.")
+              else:
+                  entries.append(entry)
+                  path.write_text(json.dumps(entries, ensure_ascii=False, indent=2) + "\n",
+                                  encoding="utf-8")
+                  print(f"APPENDED: Source={key[1]} Time={key[0]}")
+          PY
 
             git add -- log.json
             if git diff --cached --quiet; then
