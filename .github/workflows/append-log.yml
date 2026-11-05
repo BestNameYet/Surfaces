@@ -1,0 +1,65 @@
+name: Append log entry
+
+on:
+  workflow_dispatch:
+    inputs:
+      entry:
+        description: 'JSON object with Source, Time, Input, Error'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: surfaces-log-json-writer
+  cancel-in-progress: false
+
+jobs:
+  append-log:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+
+      - name: Validate entry and append to log.json
+        shell: bash
+        env:
+          ENTRY_JSON: ${{ inputs.entry }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          entry = json.loads(os.environ["ENTRY_JSON"])
+          required = {"Source", "Time", "Input", "Error"}
+          if not isinstance(entry, dict) or set(entry) != required:
+              raise ValueError("Log entry must contain exactly Source, Time, Input, Error")
+          if (not isinstance(entry["Source"], str)
+                  or not isinstance(entry["Time"], int)
+                  or isinstance(entry["Time"], bool)
+                  or not isinstance(entry["Input"], str)
+                  or not isinstance(entry["Error"], str)):
+              raise ValueError("Invalid log entry types")
+          path = Path("log.json")
+          entries = json.loads(path.read_text(encoding="utf-8"))
+          if not isinstance(entries, list):
+              raise ValueError("log.json must be an array")
+          entries.append(entry)
+          path.write_text(json.dumps(entries, ensure_ascii=False, indent=2) + "\n",
+                          encoding="utf-8")
+          print(f"Appending error entry for source {entry['Source']}")
+          PY
+
+      - name: Commit log.json
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- log.json
+          git commit -m "Append dispatched log entry"
+          git push origin HEAD:main
