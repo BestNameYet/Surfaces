@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Step 1 - Validate changed Inputs as JSON
+      - name: Step 1 - Validate JSON and CL
         shell: bash
         env:
           BEFORE_SHA: ${{ github.event.before }}
@@ -51,17 +51,21 @@ jobs:
                   continue
               try:
                   with path.open("r", encoding="utf-8") as stream:
-                      json.load(stream)
-              except (ValueError, UnicodeError):
-                  path.write_text("{}\n", encoding="utf-8")
+                      data = json.load(stream)
+                  if not isinstance(data, dict):
+                      raise ValueError("top-level JSON must be an object")
+                  if data.get("CL") not in ("$", "&", "@"):
+                      raise ValueError('CL must be one of "$", "&", "@"')
+              except (ValueError, UnicodeError) as exc:
+                  path.write_text("{}\\n", encoding="utf-8")
                   subprocess.run(["git", "add", "--", str(path)], check=True)
-                  print(f"INVALID JSON - reset to {{}}: {path}")
+                  print(f"INVALID INPUT ({exc}) - reset to {{}}: {path}")
                   invalid += 1
               else:
-                  print(f"VALID JSON - preserved: {path}")
+                  print(f"VALID JSON AND CL - preserved: {path}")
                   valid += 1
 
-          print(f"JSON validation completed: {valid} valid, {invalid} reset")
+          print(f"JSON and CL validation completed: {valid} valid, {invalid} reset")
           PY
 
       - name: Commit corrected files if required
