@@ -92,10 +92,11 @@ jobs:
               if not raw_path:
                   continue
               path = Path(os.fsdecode(raw_path))
-              if (path.parent != root or not re.fullmatch(r"agentInput\d{3}\.json", path.name)
+              if (not path.is_relative_to(root) or path.name == ".gitkeep"
                       or not path.is_file() or path.is_symlink()):
                   continue
-              source = path.stem[-3:]
+              match = re.fullmatch(r"agentInput(\d{3})\.json", path.name)
+              source = match.group(1) if match else str(path.relative_to(root))
               original = path.read_bytes().decode("utf-8", errors="replace")
               try:
                   data = json.loads(original)
