@@ -13,13 +13,13 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Create ten input files
+      - name: Create ten JSON input files
         shell: bash
         run: |
           mkdir -p Inputs
           for i in {0..9}; do
-            printf -v file 'Inputs/agentInput%03d' "$i"
-            touch "$file"
+            printf -v file 'Inputs/agentInput%03d.json' "$i"
+            printf '{}\n' > "$file"
             git add "$file"
           done
 
@@ -29,8 +29,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git diff --cached --quiet; then
-            echo "All ten files already tracked; no commit needed."
+            echo "All ten JSON files already contain {}; no commit needed."
           else
-            git commit -m "Create ten agent input files"
+            git commit -m "Create ten JSON agent input files"
             git push
           fi
