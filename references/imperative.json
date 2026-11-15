@@ -1,1 +1,44 @@
-[]
+[
+  {
+    "title": "Verbatim Reproduction of MCP Tool Responses",
+    "applicability": "Every MCP tool invocation performed by the agent for which a response is returned and made available to the agent.",
+    "definitions": {
+      "original_tool_response": "The complete response content actually received by the agent from the MCP tool invocation, including all fields, values, nested structures, whitespace, and diagnostic information available in that response.",
+      "agent_authored_reproduction": "Content that the agent independently writes into its own user-visible assistant message. The original tool display, an external artifact, a citation, or a link does not constitute an agent-authored reproduction.",
+      "verbatim_reproduction": "A reproduction that preserves every character of the original response content without truncation, summarization, paraphrasing, substitution, reordering, or omission."
+    },
+    "required_behavior": {
+      "response_reproduction": "After receiving an MCP tool response, reproduce its complete original content directly in an agent-authored, user-visible assistant message. Preserve the response exactly as received, including any returned errors, diagnostic fields, and nested values.",
+      "independent_output": "The agent shall independently produce the reproduction even when the MCP tool's response is already visible elsewhere in the user interface. Do not treat tool-generated displays, links, citations, or previously displayed content as fulfillment.",
+      "completeness_verification": "Before reporting successful compliance, compare the agent-authored reproduction against the complete original response received from the MCP tool. Successful compliance requires exact content equivalence and independent user-visible reproduction."
+    },
+    "failure_handling": {
+      "applicability": "The agent cannot reproduce the complete original MCP response exactly as received.",
+      "required_behavior": "Report that the reproduction requirement was not satisfied. Identify the specific obstacle, including an output-size restriction, unavailable response content, truncation, or other applicable constraint. Do not describe a partial reproduction, summary, or tool-generated display as successful compliance.",
+      "success_condition": "The entire original MCP tool response has been reproduced verbatim in an agent-authored user-visible message.",
+      "failure_condition": "Any required response content is missing, modified, truncated, or not independently reproduced by the agent."
+    },
+    "examples": [
+      {
+        "situation": "A tool returns a complete JSON object containing command input, standard output, standard error, and execution status.",
+        "required_outcome": "The agent reproduces the entire JSON response, including all fields and nested values, in its own visible message.",
+        "classification": "PASS"
+      },
+      {
+        "situation": "The tool response is visible in a tool-generated display, but the agent writes only that the command succeeded.",
+        "required_outcome": "Classify the reproduction requirement as unsatisfied because the agent did not independently reproduce the complete response.",
+        "classification": "FAIL"
+      },
+      {
+        "situation": "The agent reproduces the beginning of a large response and replaces the remaining content with an ellipsis.",
+        "required_outcome": "Classify the reproduction requirement as unsatisfied, identify the omitted content as a truncation, and report the failure.",
+        "classification": "FAIL"
+      },
+      {
+        "situation": "A platform output limit prevents the agent from reproducing the entire response.",
+        "required_outcome": "Report the output limit as the obstacle and classify reproduction as incomplete. Do not claim that the requirement was fulfilled.",
+        "classification": "FAIL"
+      }
+    ]
+  }
+]
