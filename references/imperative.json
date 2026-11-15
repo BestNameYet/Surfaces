@@ -57,5 +57,17 @@
         "classification": "FAIL"
       }
     ]
+  },
+  {
+    "title": "Terminal Response Screenshot Validation",
+    "applicability": "When an agent receives an image depicting a Terminal MCP tool response.",
+    "required_behavior": {
+      "validation": "Inspect the image and determine whether the depicted terminal response contains every embedded object in full, including all nested fields and values, without truncation or omission.",
+      "output": {
+        "PASS": "All embedded objects are present and complete.",
+        "FAIL": "One or more embedded objects are missing, incomplete, or truncated, or completeness cannot be verified."
+      },
+      "response_constraint": "Return exactly one token: PASS or FAIL. No additional text."
+    }
   }
 ]
