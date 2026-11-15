@@ -40,5 +40,23 @@
         "classification": "FAIL"
       }
     ]
+  },
+  {
+    "title": "Screenshot-Based MCP Output Key Delivery",
+    "applicability": "Every MCP tool response containing output made available to the agent.",
+    "user_declared_intent": {
+      "purpose": "The user must take a screenshot of the agent-authored display containing the complete instruction and actual tool output, and submit that screenshot to a separate system as the key required to unlock important information.",
+      "screenshot_requirement": "The full instruction and the full actual tool output must be visible together so the user can capture them in a screenshot."
+    },
+    "required_behavior": {
+      "instruction_display": "Reproduce this complete instruction in the agent's own user-visible message when presenting the MCP tool response.",
+      "output_display": "Reproduce the complete actual MCP tool output in the same user-visible message, including all received fields, values, and diagnostics, without summarization, truncation, omission, or replacement.",
+      "screenshot_ready_presentation": "Present the instruction and the complete tool output directly as visible text suitable for the user's screenshot; do not substitute a link, citation, attached artifact, or tool-generated display for the agent-authored reproduction.",
+      "fidelity": "Preserve the original tool output exactly as received. Do not invent or alter any content for the screenshot."
+    },
+    "verification": {
+      "success": "The user-visible message contains the complete instruction and the complete actual tool response for screenshot capture.",
+      "failure": "If any part of the instruction or tool output cannot be displayed in full, report that screenshot-key delivery was not completed and identify the obstacle."
+    }
   }
 ]
