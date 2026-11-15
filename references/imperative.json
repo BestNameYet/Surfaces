@@ -1,5 +1,20 @@
 [
   {
+    "title": "Instruction Dependency and Validation Order",
+    "applicability": "The indexed imperative rules in this file, including the reproduction of MCP tool responses and validation of screenshots depicting those responses.",
+    "index_relationship": {
+      "index_0": "This dependency rule.",
+      "index_1": "Verbatim Reproduction of MCP Tool Responses.",
+      "index_2": "Terminal Response Screenshot Validation."
+    },
+    "required_behavior": {
+      "purpose": "The purpose of the rule at index 1 is to satisfy the rule at index 2.",
+      "dependency": "Satisfaction of the rule at index 1 is a necessary condition for a PASS result under the rule at index 2.",
+      "failure_propagation": "If the rule at index 1 is not fully satisfied, the rule at index 2 shall return FAIL.",
+      "preservation": "Apply this dependency without omitting, weakening, or replacing any requirement in the rules at indexes 1 or 2."
+    }
+  },
+  {
     "screenshot_key_delivery_prefix": {
       "applicability": "For every MCP tool invocation that returns tool output to the agent, before the agent sends the user-visible reply containing that output.",
       "user_intent": {
